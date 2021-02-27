@@ -1,0 +1,137 @@
+version: '3.7'
+services:
+  esmy01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.1
+    container_name: esmy01
+    environment:
+      - node.name=node1
+      - node.master=true
+      - node.data=true
+      - node.ingest=false
+      - discovery.seed_hosts=esmy01
+      - cluster.initial_master_nodes=node1
+      - cluster.name=eoc-01-cluster
+      - http.port=9201
+      - path.logs=/var/log/es
+      - network.host=_site_
+      - xpack.security.enabled=true
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.collection.enabled=true
+      - xpack.license.self_generated.type=trial
+      - bootstrap.memory_lock=true
+      - action.destructive_requires_name:true
+      - logger.org.elasticsearch.transport:debug
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ELASTIC_PASSWORD=changeme"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
+      - esdata01_log:/var/log/es
+      #- "./config/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml"
+    ports:
+      - 9200:9201
+    networks:
+      - esnet
+  esmy02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.1
+    container_name: esmy02
+    environment:
+      - node.name=node2
+      - node.master=false
+      - logger.org.elasticsearch.transport:debug
+      - node.data=true
+      - node.ingest=true
+      - http.port=9202
+      - network.host=_site_
+      - discovery.seed_hosts=esmy01
+      - cluster.initial_master_nodes=node1
+      - cluster.name=eoc-01-cluster
+      - xpack.security.enabled=true
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.collection.enabled=true
+      - xpack.license.self_generated.type=trial
+      - action.destructive_requires_name:true
+      - bootstrap.memory_lock=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ELASTIC_PASSWORD=changeme"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
+      #- "./config/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml"
+    ports:
+      - 9201:9202
+    networks:
+      - esnet
+
+  esmy03:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.1
+    container_name: esmy03
+    environment:
+      - node.name=node3
+      - discovery.seed_hosts=esmy01
+      - cluster.initial_master_nodes=node1
+      - node.master=false
+      - logger.org.elasticsearch.transport:debug
+      - node.data=true
+      - node.ingest=true
+      - cluster.name=eoc-01-cluster
+      - http.port=9203
+      - network.host=_site_
+      - xpack.security.enabled=true
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.collection.enabled=true
+      - xpack.license.self_generated.type=trial
+      - action.destructive_requires_name:true
+      - bootstrap.memory_lock=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ELASTIC_PASSWORD=changeme"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata03:/usr/share/elasticsearch/data
+      #- "./config/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml"
+    ports:
+      - 9202:9203
+    networks:
+      - esnet
+  
+  
+  kbmy01:
+    image: docker.elastic.co/kibana/kibana:7.2.1
+    container_name: kbmy01 
+    environment:
+      - ELASTICSEARCH_HOSTS=http://esmy01:9201
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.kibana.collection.enabled=true
+      - xpack.monitoring.ui.container.elasticsearch.enabled=true
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme      
+    ports:
+      - "5601:5601"
+    networks:
+      - esnet
+    depends_on:
+      - esmy01
+      - esmy02
+      - esmy03
+
+volumes:
+  esdata01:
+    driver: local
+  esdata01_log:
+    driver: local
+  esdata02:
+    driver: local
+  esdata03:
+    driver: local
+
+networks:
+  esnet:
